@@ -12,6 +12,7 @@ photutils = "*"
 webbpsf = "*"
 ipykernel = "*"
 pyastronomy = "*"
+pynrc = "*"
 
 [dev-packages]
 

@@ -6,8 +6,9 @@ from scipy import signal, interpolate
 # reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.correlate2d.html
 
 if __name__ == '__main__':
-	data1 = fits.getdata('./data/reduction_data_F444W.fits')
-	data2 = fits.getdata('./outs/psf_test_100.fits')
+	filt = 'F444W'
+	data1 = fits.getdata(f'./data/reduction_data_{filt}.fits')
+	data2 = fits.getdata(f'./outs/psf_{filt}_100.fits')
 
 	corr = signal.correlate2d(data1, data2, boundary='symm', mode='same')
 	print(corr.shape)
@@ -33,20 +34,6 @@ if __name__ == '__main__':
 
 	print(f'x {x}, y {y}')
 
-	# fig, (ax_1, ax_2, ax_corr) = plt.subplots(3, 1, figsize=(6, 15))
-
-	# ax_1.imshow(data1, cmap='gray')
-	# ax_1.set_title('reduction data')
-
-	# ax_2.imshow(data2, cmap='gray')
-	# ax_2.set_title('psf (template)')
-
-	# ax_corr.imshow(corr, cmap='gray')
-	# ax_corr.set_title('Cross-correlation')
-
-	# ax_1.plot(x, y, 'rx')
-	# ax_2.plot(x, y, 'rx')
-	# ax_corr.plot(x, y, 'rx')
 	plt.subplot(131)
 	plt.imshow(data1)
 	plt.subplot(132)
@@ -58,10 +45,5 @@ if __name__ == '__main__':
 	cax = plt.axes([0.85, 0.1, 0.05, 0.8])
 	plt.colorbar(cax=cax)
 
-	plt.savefig('./outs/crosscorrelation.png')
+	plt.savefig(f'./outs/crosscorrelation_{filt}.png')
 	plt.show()
-
-	# fig.savefig('./outs/crosscorrelation.png')
-	# fig.show()
-
-	# next step: extract astrometry/photometry
