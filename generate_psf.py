@@ -23,9 +23,9 @@ nc.options['source_offset_theta'] = theta
 # returns an astropy.io.fits.HDUlist containing PSF and header
 # psf = nc.calc_psf(outfile='./outs/psf_test.fits')
 psf = nc.calc_psf(outfile=f'./outs/psf_{nc.filter}_{pixels}_r{r}_theta{theta}.fits',
-	fov_pixels=pixels,
-	oversample=1,
-	)
+    fov_pixels=pixels,
+    oversample=1,
+    )
 psf.info()
 
 
