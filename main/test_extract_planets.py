@@ -29,7 +29,9 @@ def calc_error(actual, expected):
     """
     returns percent error
     """
-    return (actual - expected) / expected * 100
+    if actual == None or expected == None:
+        return None
+    return abs((actual - expected) / expected * 100)
 
 
 def analyze_planet_error(expected, input_data, found, processed_data, xy_error, debug=False):
@@ -50,6 +52,8 @@ def analyze_planet_error(expected, input_data, found, processed_data, xy_error, 
     unused_from_fnd_list = found.copy()
 
     for exp in expected:
+        # exp_x = exp['delta_X']
+        # exp_y = exp['delta_X']
         exp_x, exp_y = exp['location']
         distances = [math.dist(exp['location'], f['location']) for f in found]
         min_dist = min(distances)
@@ -70,19 +74,11 @@ def analyze_planet_error(expected, input_data, found, processed_data, xy_error, 
             axes[1].plot(fnd_x, fnd_y, 'go', fillstyle='none', markersize=14)
             result_dict['found x'].append(fnd_x)
             result_dict['found y'].append(fnd_y)
-            # result_dict['x error'].append(abs(calc_error(fnd_x, exp_x)))
-            # result_dict['y error'].append(abs(calc_error(fnd_y, exp_y)))
-            # result_dict['distance'].append( convert_to_arcsec(math.dist([fnd_x, fnd_y], [exp_x, exp_y])) )
             result_dict['found brightness'].append(fnd['brightness'])
-            # result_dict['brightness % error'].append(calc_error(fnd['brightness'], exp['brightness']))
         else:
             result_dict['found x'].append(None)
             result_dict['found y'].append(None)
-            # result_dict['x error'].append(None)
-            # result_dict['y error'].append(None)
-            # result_dict['distance'].append(None)
             result_dict['found brightness'].append(None)
-            # result_dict['brightness % error'].append(None)
 
     for fnd in unused_from_fnd_list:
         fnd_x, fnd_y = fnd['location']
@@ -107,7 +103,6 @@ def analyze_planet_error(expected, input_data, found, processed_data, xy_error, 
         else:
             return None
     df['distance'] = df.apply(lambda row: df_distance( row['expected x'], row['expected y'], row['found x'], row['found y'] ), axis=1)
-    # result_dict['brightness % error'].append(calc_error(fnd['brightness'], exp['brightness']))
     df['brightness % error'] = df.apply(lambda row: calc_error(row['found brightness'], row['expected brightness']), axis=1)
 
     found_count = int(df.count()['distance'])
@@ -115,34 +110,40 @@ def analyze_planet_error(expected, input_data, found, processed_data, xy_error, 
     fp_count = len(df.index) - int(df.count()['expected x'])
 
     nc = get_nircam_with_options()
+    # expected x  expected y   found x   found y  expected brightness  found brightness                          expected r, theta                            found r, theta
+    columns = ['distance', 'brightness % error', 'expected x', 'expected y', 'found x', 'found y', 'expected brightness', 'found brightness', 'expected r, theta', 'found r, theta']
     logtext = f"""
 filter = {nc.filter}
 fov_arcsec = {nc.fov_arcsec}
 pixelscale = {nc.pixelscale}
 
---------- FOUND: {found_text}, FALSE POSITIVES: {fp_count} ----------\n{df.to_string(max_rows=None, max_cols=None)}
-	"""
-    print(logtext)
+--------- FOUND: {found_text}, FALSE POSITIVES: {fp_count} ----------\n{df[columns].to_string(max_rows=None, max_cols=None)}
+    """
+    if debug:
+        print(logtext)
 
     im = axes[0].imshow(input_data, cmap="viridis")
     fig.colorbar(im, ax=axes[0], fraction=0.046, pad=0.06)
     im = axes[1].imshow(processed_data, cmap="RdBu")
     fig.colorbar(im, ax=axes[1], fraction=0.046, pad=0.06, norm=mcolors.TwoSlopeNorm(0))
 
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
     # save plot
-    plt.suptitle(f'{nc.filter}, fov_arcsec {nc.fov_arcsec}, pixelscale {nc.pixelscale}\nFound: {found_text}, False Positives: {fp_count}')
+    plt.suptitle(f'Planet Extraction Test\n{nc.filter}, fov_arcsec {nc.fov_arcsec}, pixelscale {nc.pixelscale}\nFound: {found_text}, False Positives: {fp_count}')
     plt.savefig(f'./outs/testextract_{timestamp}.png')
-    plt.show()
+    if debug:
+        plt.show()
 
     with open(f'./outs/testextract_{timestamp}.txt', 'w') as f:
         f.write(logtext)
 
+    return df
 
 
 
 if __name__ == '__main__':
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     numpoints = 3
 
