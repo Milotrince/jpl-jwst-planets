@@ -1,38 +1,8 @@
 import numpy as np
 import configparser
 import webbpsf
-import operator
 
 nc = None
-
-
-def reshape_centered(img, bounding):
-    if np.all(img.shape > bounding):
-        # crop
-        start = tuple(map(lambda a, da: a//2-da//2, img.shape, bounding))
-        end = tuple(map(operator.add, start, bounding))
-        slices = tuple(map(slice, start, end))
-        return img[slices]
-    else:
-        # add empty outside
-        result = np.zeros(bounding)
-        start = tuple(map(lambda a, b: b//2-a//2, img.shape, bounding))
-        end = tuple(map(operator.add, start, img.shape))
-        slices = tuple(map(slice, start, end))
-        result[slices] = img
-        return result
-
-
-if __name__ == "__main__":
-    from scipy import misc
-    import matplotlib.pyplot as plt
-    
-    img = misc.ascent()
-    print(img.shape)
-    reshaped = reshape_centered(img, (1000,1000))
-    plt.imshow(reshaped)
-    plt.show()
-
 
 def convert_rtheta_to_xy(r, theta):
     pixels = round(nc.fov_arcsec / nc.pixelscale)
@@ -41,10 +11,10 @@ def convert_rtheta_to_xy(r, theta):
     return (x, y)
 
 
-def get_test_psf(nc, offset_r=0, offset_theta=0, oversample=1):
+def get_test_psf(nc, offset_r=0, offset_theta=0, size=None):
     nc.options['source_offset_r'] = offset_r
     nc.options['source_offset_theta'] = offset_theta
-    psf = nc.calc_psf(fov_arcsec=nc.fov_arcsec, oversample=oversample)
+    psf = nc.calc_psf(fov_arcsec=nc.fov_arcsec, oversample=1)
     # print('getting psf', 'filter', nc.filter, 'pixels', nc.pixelscale, 'fov_arcsec', nc.fov_arcsec)
     # psf.info()
     return psf[0].data
@@ -57,15 +27,6 @@ def convert_to_arcsec(px):
     nc = get_nircam_with_options()
     pixels = round(nc.fov_arcsec / nc.pixelscale)
     return (px-pixels/2) * nc.pixelscale
-
-
-def convert_to_px(arcsec):
-    """
-    Convert unit from arcseconds to pixels
-    """
-    nc = get_nircam_with_options()
-    pixels = round(nc.fov_arcsec / nc.pixelscale)
-    return arcsec / nc.pixelscale + pixels/2
 
 
 def convert_xy_to_rtheta(x, y):

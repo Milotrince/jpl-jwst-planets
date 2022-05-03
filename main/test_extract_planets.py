@@ -8,7 +8,7 @@ import matplotlib.colors as mcolors
 
 from simulate_data import get_test_data
 from extract_planets import extract_planets
-from util import get_nircam_with_options, convert_to_arcsec, convert_xy_to_rtheta
+from util import *
 
 
 def save_testdata(input_data, expected):
@@ -52,9 +52,10 @@ def analyze_planet_error(expected, input_data, found, processed_data, xy_error, 
     unused_from_fnd_list = found.copy()
 
     for exp in expected:
-        # exp_x = exp['delta_X']
-        # exp_y = exp['delta_X']
-        exp_x, exp_y = exp['location']
+        exp_x = convert_to_px(exp['delta_X'])
+        exp_y = convert_to_px(exp['delta_Y'])
+        exp['location'] = (exp_x, exp_y)
+        # exp_x, exp_y = exp['location']
         distances = [math.dist(exp['location'], f['location']) for f in found]
         min_dist = min(distances)
 
@@ -94,6 +95,8 @@ def analyze_planet_error(expected, input_data, found, processed_data, xy_error, 
 
     df = pd.DataFrame(result_dict)
     df['expected r, theta'] = df.apply(lambda row: convert_xy_to_rtheta(row['expected x'], row['expected y']), axis=1)
+    df['expected r'] = df.apply(lambda row: convert_xy_to_rtheta(row['expected x'], row['expected y'])[0], axis=1)
+    df['expected theta'] = df.apply(lambda row: convert_xy_to_rtheta(row['expected x'], row['expected y'])[1], axis=1)
     df['found r, theta'] = df.apply(lambda row: convert_xy_to_rtheta(row['found x'], row['found y']), axis=1)
     # These values are in pixels. Convert to arcsec
     df[['expected x', 'expected y', 'found x', 'found y']] = df[['expected x', 'expected y', 'found x', 'found y']].apply(convert_to_arcsec)
@@ -110,8 +113,7 @@ def analyze_planet_error(expected, input_data, found, processed_data, xy_error, 
     fp_count = len(df.index) - int(df.count()['expected x'])
 
     nc = get_nircam_with_options()
-    # expected x  expected y   found x   found y  expected brightness  found brightness                          expected r, theta                            found r, theta
-    columns = ['distance', 'brightness % error', 'expected x', 'expected y', 'found x', 'found y', 'expected brightness', 'found brightness', 'expected r, theta', 'found r, theta']
+    columns = ['distance', 'brightness % error', 'expected x', 'expected y', 'found x', 'found y', 'expected brightness', 'found brightness', 'expected r', 'expected theta', 'found r, theta']
     logtext = f"""
 filter = {nc.filter}
 fov_arcsec = {nc.fov_arcsec}

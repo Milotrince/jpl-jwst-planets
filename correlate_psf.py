@@ -8,7 +8,13 @@ from scipy import signal, interpolate
 if __name__ == '__main__':
     filt = 'F444W'
     data1 = fits.getdata(f'./data/reduction_data_{filt}.fits')
-    data2 = fits.getdata(f'./outs/psf_{filt}_100.fits')
+    # xmin, xmax, ymin, ymax = 40,50, 58,68
+    # data1[ymin:ymax,xmin:xmax] = 0
+
+    data1[58:68, 40:50] = 0
+    # data1[53:63, 71:81] = 0
+    # data1[38:48, 36:46] = 0
+    data2 = fits.getdata(f'./old_outs/psf_{filt}_100.fits')
 
     corr = signal.correlate2d(data1, data2, boundary='symm', mode='same')
     print(corr.shape)
@@ -40,6 +46,7 @@ if __name__ == '__main__':
     plt.imshow(data2)
     plt.subplot(133)
     plt.imshow(corr)
+    plt.plot(x, y, 'rx')
 
     plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
     cax = plt.axes([0.85, 0.1, 0.05, 0.8])

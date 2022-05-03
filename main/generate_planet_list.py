@@ -30,8 +30,8 @@ def get_random_planets(nc, amount=3, psf=None, r_min_max=(0,3), brightness_min_m
         b_min, b_max = brightness_min_max
         brightness = (random.random() * 10) * 10 ** random.randint(b_min, b_max)
 
-        planets.append(dict(brightness=brightness, delta_X=x_arcsec, delta_Y=y_arcsec, r=r, theta=theta))
-        # planets.append(dict(brightness=brightness, delta_X=x_arcsec, delta_Y=y_arcsec, r=r, theta=theta, location=(x,y)))
+        # planets.append(dict(brightness=brightness, delta_X=x_arcsec, delta_Y=y_arcsec, r=r, theta=theta))
+        planets.append(dict(brightness=brightness, delta_X=x_arcsec, delta_Y=y_arcsec, r=r, theta=theta, location=(x,y)))
     return planets
 
 def get_simulated_planets_list(nc, amount = 100, max_planets_per_star = 5):
