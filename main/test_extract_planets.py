@@ -10,7 +10,6 @@ from simulate_data import get_test_data
 from extract_planets import extract_planets
 from util import *
 
-
 def save_testdata(input_data, expected):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     np.save(f'in/{timestamp}_test_data.npy', input_data)
@@ -34,86 +33,105 @@ def calc_error(actual, expected):
     return abs((actual - expected) / expected * 100)
 
 
-def analyze_planet_error(expected, input_data, found, processed_data, xy_error, debug=False):
+def analyze_planet_error(expected, input_data, found, processed_data, star_location=None, acceptable_pixel_error=1, debug=False):
+    if star_location == None:
+        star_location = input_data.shape/2
+
+    nc = get_nircam_with_options()
 
     fig, axes = plt.subplots(1, 2)
     axes[0].set_title('Input Data')
     axes[1].set_title('Result')
 
     result_dict = {
-        'expected x': [],
-        'expected y': [],
-        'found x': [],
-        'found y': [],
-        'expected brightness': [],
-        'found brightness': [],
+        'expected delta x': [],
+        'expected delta y': [],
+        'expected r': [],
+        'expected theta': [],
+        'found delta x': [],
+        'found delta y': [],
+        'expected brightness contrast': [],
+        'found brightness contrast': [],
     }
 
     unused_from_fnd_list = found.copy()
-
+    
     for exp in expected:
-        exp_x = convert_to_px(exp['delta_X'])
-        exp_y = convert_to_px(exp['delta_Y'])
-        exp['location'] = (exp_x, exp_y)
-        # exp_x, exp_y = exp['location']
+        exp_x_px = convert_to_px(exp['delta_Y']) + star_location[0]
+        exp_y_px = convert_to_px(exp['delta_X']) + star_location[1]
+        exp['location'] = (exp_x_px, exp_y_px)
+        print('~~~~ exp px', exp['location'])
+        
         distances = [math.dist(exp['location'], f['location']) for f in found]
-        min_dist = min(distances)
+        min_dist = min(distances) if len(distances) > 0 else 10
 
-        axes[0].plot(exp_x, exp_y, 'yo', fillstyle='none', markersize=14)
-        result_dict['expected x'].append(exp_x)
-        result_dict['expected y'].append(exp_y)
-        result_dict['expected brightness'].append(exp['brightness'])
+        axes[0].plot(exp_x_px, exp_y_px, 'yo', fillstyle='none', markersize=14)
+        result_dict['expected delta x'].append(exp['delta_X'])
+        result_dict['expected delta y'].append(exp['delta_Y'])
+        result_dict['expected r'].append(exp['r'])
+        result_dict['expected theta'].append(exp['theta'])
+        result_dict['expected brightness contrast'].append(exp['brightness'])
 
-        if min_dist < xy_error: 
+        if min_dist < acceptable_pixel_error: 
             min_index = distances.index(min_dist)
 
             fnd = found[min_index]
-            fnd_x, fnd_y = fnd['location']
             if fnd in unused_from_fnd_list:
                 unused_from_fnd_list.remove(fnd)
 
-            axes[1].plot(fnd_x, fnd_y, 'go', fillstyle='none', markersize=14)
-            result_dict['found x'].append(fnd_x)
-            result_dict['found y'].append(fnd_y)
-            result_dict['found brightness'].append(fnd['brightness'])
+            fnd_px_x, fnd_px_y = fnd['location']
+            axes[1].plot(fnd_px_x, fnd_px_y, 'go', fillstyle='none', markersize=14)
+
+            print('~~~~~~~~~~~')
+            print('fnd px loc', fnd['location'])
+            print('star loc  ', star_location)
+            print('pixelscale', nc.pixelscale)
+            print('~~~~~~~~~~~')
+
+            # result_dict['found delta x'].append((star_location[0] - fnd_px_x) * nc.pixelscale)
+            # result_dict['found delta y'].append((star_location[1] - fnd_px_y) * nc.pixelscale)
+            result_dict['found delta x'].append((fnd_px_y - star_location[1]) * nc.pixelscale)
+            result_dict['found delta y'].append((fnd_px_x - star_location[0]) * nc.pixelscale)
+            result_dict['found brightness contrast'].append(fnd['brightness contrast'])
         else:
-            result_dict['found x'].append(None)
-            result_dict['found y'].append(None)
-            result_dict['found brightness'].append(None)
+            result_dict['found delta x'].append(None)
+            result_dict['found delta y'].append(None)
+            result_dict['found brightness contrast'].append(None)
 
     for fnd in unused_from_fnd_list:
-        fnd_x, fnd_y = fnd['location']
+        fnd_px_x, fnd_px_y = fnd['location']
+        axes[1].plot(fnd_px_x, fnd_px_y, 'go', fillstyle='none', markersize=14)
 
-        axes[1].plot(fnd_x, fnd_y, 'ro', fillstyle='none', markersize=14)
+        result_dict['found delta x'].append((star_location[0] - fnd_px_x) * nc.pixelscale)
+        result_dict['found delta y'].append((star_location[1] - fnd_px_y) * nc.pixelscale)
+        result_dict['found brightness contrast'].append(fnd['brightness contrast'])
 
-        result_dict['found x'].append(fnd_x)
-        result_dict['found y'].append(fnd_y)
-        result_dict['found brightness'].append(fnd['brightness'])
-        result_dict['expected x'].append(None)
-        result_dict['expected y'].append(None)
-        result_dict['expected brightness'].append(None)
+        result_dict['expected delta x'].append(None)
+        result_dict['expected delta y'].append(None)
+        result_dict['expected brightness contrast'].append(None)
+        result_dict['expected r'].append(None)
+        result_dict['expected theta'].append(None)
+
 
     df = pd.DataFrame(result_dict)
-    df['expected r, theta'] = df.apply(lambda row: convert_xy_to_rtheta(row['expected x'], row['expected y']), axis=1)
-    df['expected r'] = df.apply(lambda row: convert_xy_to_rtheta(row['expected x'], row['expected y'])[0], axis=1)
-    df['expected theta'] = df.apply(lambda row: convert_xy_to_rtheta(row['expected x'], row['expected y'])[1], axis=1)
-    df['found r, theta'] = df.apply(lambda row: convert_xy_to_rtheta(row['found x'], row['found y']), axis=1)
-    # These values are in pixels. Convert to arcsec
-    df[['expected x', 'expected y', 'found x', 'found y']] = df[['expected x', 'expected y', 'found x', 'found y']].apply(convert_to_arcsec)
+    df['found r,theta'] = df.apply(lambda row: convert_xy_to_rtheta(row['found delta x'], row['found delta y']), axis=1)
+    df['found r'] = df.apply(lambda row: row['found r,theta'][0], axis=1)
+    df['found theta'] = df.apply(lambda row: row['found r,theta'][1], axis=1)
+
     def df_distance(ex, ey, fx, fy):
         if ex and ey and fx and fy:
             return math.dist([ex, ey], [fx, fy])
         else:
             return None
-    df['distance'] = df.apply(lambda row: df_distance( row['expected x'], row['expected y'], row['found x'], row['found y'] ), axis=1)
-    df['brightness % error'] = df.apply(lambda row: calc_error(row['found brightness'], row['expected brightness']), axis=1)
+    df['distance'] = df.apply(lambda row: df_distance( row['expected delta x'], row['expected delta y'], row['found delta x'], row['found delta y'] ), axis=1)
+    df['brightness % error'] = df.apply(lambda row: calc_error(row['found brightness contrast'], row['expected brightness contrast']), axis=1)
 
     found_count = int(df.count()['distance'])
     found_text = f"{found_count}/{len(expected)}"
-    fp_count = len(df.index) - int(df.count()['expected x'])
+    fp_count = len(df.index) - int(df.count()['expected delta x'])
 
     nc = get_nircam_with_options()
-    columns = ['distance', 'brightness % error', 'expected x', 'expected y', 'found x', 'found y', 'expected brightness', 'found brightness', 'expected r', 'expected theta', 'found r, theta']
+    columns = ['distance', 'brightness % error', 'expected brightness contrast', 'found brightness contrast', 'expected delta x', 'expected delta y', 'found delta x', 'found delta y', 'expected r', 'expected theta', 'found r', 'found theta']
     logtext = f"""
 filter = {nc.filter}
 fov_arcsec = {nc.fov_arcsec}
@@ -134,7 +152,9 @@ pixelscale = {nc.pixelscale}
 
     # save plot
     plt.suptitle(f'Planet Extraction Test\n{nc.filter}, fov_arcsec {nc.fov_arcsec}, pixelscale {nc.pixelscale}\nFound: {found_text}, False Positives: {fp_count}')
-    plt.savefig(f'./outs/testextract_{timestamp}.png')
+    figurefilepath = f'./outs/testextract_{timestamp}.png'
+    print(f'figure saved to {figurefilepath}')
+    plt.savefig(figurefilepath)
     if debug:
         plt.show()
 
@@ -161,12 +181,9 @@ if __name__ == '__main__':
         input_data, expected = get_test_data(numpoints=numpoints, debug=False)
         save_testdata(input_data, expected)
 
-    threshold_mult = 0.6
-    threshold = np.max(input_data) * threshold_mult
-
     acceptable_position_error = 2 # in pixel distance
 
     print("Extracting planets...")
-    processed_data, found = extract_planets(input_data, threshold, debug=False)
+    processed_data, found = extract_planets(input_data, debug=False)
 
-    analyze_planet_error(expected, input_data, found, processed_data, xy_error=acceptable_position_error)
+    analyze_planet_error(expected, input_data, found, processed_data, acceptable_pixel_error=acceptable_position_error)

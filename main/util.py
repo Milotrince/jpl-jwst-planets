@@ -5,6 +5,13 @@ import operator
 
 nc = None
 
+def recenter(img, new_center):
+    length = min(map(lambda i, j: min(i - j, j), img.shape, new_center))
+    start = tuple(map(lambda a, c: c - length, img.shape, new_center))
+    end = tuple(map(lambda a: a + length*2, start))
+    slices = tuple(map(slice, start, end))
+    return img[slices]
+
 
 def reshape_centered(img, bounding):
     if np.all(img.shape > bounding):
@@ -63,21 +70,19 @@ def convert_to_px(arcsec):
     """
     Convert unit from arcseconds to pixels
     """
-    nc = get_nircam_with_options()
-    pixels = round(nc.fov_arcsec / nc.pixelscale)
-    return arcsec / nc.pixelscale + pixels/2
+    return arcsec / nc.pixelscale
 
 
 def convert_xy_to_rtheta(x, y):
+    """
+    Convert rectangular to polar units
+    """
     if x == None or y == None:
         return (None, None)
-    nc = get_nircam_with_options()
-    pixels = round(nc.fov_arcsec / nc.pixelscale)
-    x = x - pixels/2 
-    y = y - pixels/2
-    # each pixel corresponds to __ arcseconds
-    r = np.sqrt(x**2 + y**2) * nc.pixelscale
+    r = np.sqrt(x**2 + y**2)
     theta = np.rad2deg( np.arctan2(y, x) ) - 90
+    if theta < 0:
+        theta += 360
     return (r, theta)
 
 
@@ -99,10 +104,10 @@ def get_nircam_with_options():
 
     return nc
 
-def get_defaults():
+def get_constants():
     """
     Returns dictionary of default values in options.cfg
     """
     config = configparser.ConfigParser()
     config.read('options.cfg')
-    return config['default']
+    return config['constants']

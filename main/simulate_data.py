@@ -14,10 +14,10 @@ def make_image_with_planets(planets_data, debug=False):
     psf_data -= get_test_psf(nc, offset_r=0, offset_theta=0) # block star
     for i, planet in enumerate(planets_data):
         if debug:
-            print(f'planet {i} inserted at', 'r', planet['r'], 'theta', planet['theta'], 'x,y', planet['location'])
+            print(f'planet {i} inserted at', 'r', planet['r'], 'theta', planet['theta'])
         p = get_test_psf(nc, offset_r=planet['r'], offset_theta=planet['theta'])
         # p = p * planet['brightness']
-        p = p * planet['brightness'] / np.max(p)
+        # p = p * planet['brightness'] / np.max(p)
         psf_data += p
     return psf_data
 
