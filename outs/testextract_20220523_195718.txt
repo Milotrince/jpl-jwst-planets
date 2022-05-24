@@ -1,0 +1,16 @@
+
+filter = F444W
+fov_arcsec = 10.017
+pixelscale = 0.063
+
+--------- FOUND: 2/2, FALSE POSITIVES: 0 ----------
+   distance  found planet flux  brightness % error  expected brightness contrast  found brightness contrast  expected delta x  expected delta y  found delta x  found delta y  expected r  expected theta   found r  found theta
+0  0.082223           0.000310           31.380467                      0.000082                   0.000107         -1.319655         -2.044107      -1.397458      -2.017511    2.433077      147.154125  2.454229   145.291038
+1  0.192016           0.002339           32.644903                      0.000610                   0.000810          0.533820          1.399863       0.371384       1.502257    1.498192      339.126283  1.547482   346.113921
+    
+
+
+   distance  found planet flux  brightness % error  expected brightness contrast  found brightness contrast  expected delta x  ...
+0  0.082223           0.000310           31.380467                      0.000082                   0.000107         -1.319655  ...
+1  0.192016           0.002339           32.644903                      0.000610                   0.000810          0.533820  ...
+    
