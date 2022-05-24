@@ -26,6 +26,7 @@ star_flux = constants.getfloat('star_flux')
 sigma = constants.getfloat('blur_sigma')
 roll = constants.getfloat('roll')
 photometry_aperture_radius = constants.getfloat('photometry_aperture_radius')
+photometry_multiplier = constants.getfloat('photometry_multiplier')
 # Input image is in MJy/sr
 # MJy/sr to Jy/arcsec2
 # MJy/sr * 2.35045e-11 sr/arcsec2 * 1e6 Jy/MJy
@@ -63,7 +64,7 @@ def calc_photometry(found_x, found_y, _psf, data):
     """
     found_x, found_y is subpixel location of planet in data
     data is in MJy/sr
-    psf is in normalized flux/px
+    _psf is in normalized flux/px, with image and pupil mask
     MJy_per_sr_to_Jy_per_arcsec2 = 0.0000235045
         MJy/sr * 2.35045e-11 sr/arcsec2 * 1e6 Jy/MJy
     pixelscale is arcsec/px
@@ -74,25 +75,28 @@ def calc_photometry(found_x, found_y, _psf, data):
     data_masked = mask_image(data, mask)
     psf_masked = mask_image(_psf, mask)
 
+    # plt.suptitle("Aperture Photometry")
     # plt.subplot(2,2,1)
-    # plt.title("ref psf")
+    # plt.title("Reference PSF")
     # plt.imshow(_psf, norm=LogNorm())
     # plt.colorbar()
     # plt.subplot(2,2,2)
-    # plt.title("ref psf masked")
+    # plt.title("Reference PSF (masked)")
     # plt.imshow(psf_masked, norm=LogNorm())
     # plt.colorbar()
     # plt.subplot(2,2,3)
-    # plt.title("data")
+    # plt.title("Data")
     # plt.imshow(data)
+    # plt.colorbar()
     # plt.subplot(2,2,4)
-    # plt.title("data masked")
-    # plt.imshow(data_masked)
+    # plt.title("Data (masked)")
+    # plt.imshow(data_masked, norm=LogNorm())
+    # plt.colorbar()
     # plt.show()
     # print("****** data masked sum", data_masked.sum())
     # print("****** psf masked sum", psf_masked.sum())
 
-    return data_masked.sum() * MJy_per_sr_to_Jy_per_arcsec2 * (nc.pixelscale**2) / psf_masked.sum()
+    return data_masked.sum() * MJy_per_sr_to_Jy_per_arcsec2 * (nc.pixelscale**2) / psf_masked.sum() * photometry_multiplier
 
  
 def get_cross_corr(img, template):
@@ -177,17 +181,19 @@ def extract_planets(input_data, star_location=None, debug=False):
             # print('arcsec x',x_arcsec,'arcsec y',y_arcsec)
             # print('r',r,'theta',theta)
 
-        psf_nomask = generate_psf(nc_nomask, offset_r=r, offset_theta=theta)
-        planet_flux = calc_photometry(found_x, found_y, psf_nomask, data)
+        psf_with_mask = generate_psf(nc, offset_r=r, offset_theta=theta)
+        # psf_nomask = generate_psf(nc_nomask, offset_r=r, offset_theta=theta)
+
+        # planet_flux = calc_photometry(found_x, found_y, psf_nomask, data)
+        planet_flux = calc_photometry(found_x, found_y, psf_with_mask, data)
 
         # subtraction step
-        psf_with_mask = generate_psf(nc, offset_r=r, offset_theta=theta)
         subtract_psf = get_subtract_psf(psf_with_mask, data_value_at_maxcorr) 
         data = data - subtract_psf
 
 
         plt.subplot(2,2,3)
-        plt.title(f"subtrahend")
+        plt.title(f"Subtrahend")
         plt.imshow(subtract_psf)
         plt.colorbar()
 
@@ -223,38 +229,41 @@ def extract_planets(input_data, star_location=None, debug=False):
             if len(distances) > 0: 
                 print('min distance:', min(distances))
 
+            plt.suptitle(f"Step {step_number}")
             plt.subplot(2,2,1)
-            plt.title(f"step {step_number}: data ")
+            plt.title(f"Data")
             plt.imshow(data)
             plt.colorbar()
 
-        pixel_distance_same_planet_threshold = constants.getfloat('pixel_distance_same_planet_threshold')
-        if len(distances) < 1 or min(distances) > pixel_distance_same_planet_threshold:
-            data = perform_step_at(data, subpixel_x, subpixel_y)
+        data = perform_step_at(data, subpixel_x, subpixel_y)
+
+        # EXPERIMENTAL
+        # pixel_distance_same_planet_threshold = constants.getfloat('pixel_distance_same_planet_threshold')
+        # if len(distances) < 1 or min(distances) > pixel_distance_same_planet_threshold:
+        #     data = perform_step_at(data, subpixel_x, subpixel_y)
             
-        elif min(distances) < pixel_distance_same_planet_threshold:
-            # Found two spots very close to each other. Average the two then subtract
-            min_index = distances.index(min(distances))
-            other = fnd_list.pop(min_index)
-            other_x, other_y = other['relative location']
-            avg_x = np.mean([other_x, subpixel_x])
-            avg_y = np.mean([other_y, subpixel_y])
-
-            # undo the previous subtraction
-            data += other['subtracted']/2
-
-            data = perform_step_at(data, avg_x, avg_y)
+        # elif min(distances) < pixel_distance_same_planet_threshold:
+        #     # Found two spots very close to each other. Average the two then subtract
+        #     min_index = distances.index(min(distances))
+        #     other = fnd_list.pop(min_index)
+        #     other_x, other_y = other['relative location']
+        #     avg_x = np.mean([other_x, subpixel_x])
+        #     avg_y = np.mean([other_y, subpixel_y])
+        #     # undo the previous subtraction
+        #     data += other['subtracted']/2
+        #     data = perform_step_at(data, avg_x, avg_y)
 
 
         if debug:
             plt.subplot(2,2,2)
-            plt.title(f"crosscorr; max={np.max(crosscorrelation)}")
+            # plt.title(f"crosscorr; max={np.max(crosscorrelation)}")
+            plt.title(f"Cross-correlation")
             plt.plot(x_of_max, y_of_max, 'rx')
             plt.imshow(crosscorrelation)
             plt.colorbar()
 
             plt.subplot(2,2,4)
-            plt.title(f"result")
+            plt.title(f"Result")
             plt.imshow(data)
             plt.colorbar()
 
