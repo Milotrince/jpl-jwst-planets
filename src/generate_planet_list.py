@@ -25,8 +25,6 @@ def get_random_planets(nc, amount=3, psf=None, r_min_max=(0,3), brightness_min_m
 # Geoff:
 # It should have at least three columns - delta_X, delta_Y, and brightness -
 # the X,Y position of the planet relative to the star and the brightness of the planet relative to the star.
-        # because planets are much less bright
-        # brightness = np.max(psf) * (random.random() * 0.5 + 1 ) * 0.1
         b_min, b_max = brightness_min_max
         brightness = (random.random() * 10) * 10 ** random.randint(b_min, b_max)
 

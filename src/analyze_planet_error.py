@@ -172,21 +172,23 @@ pixelscale = {nc.pixelscale}
 
 if __name__ == '__main__':
 
-    numpoints = 3
+    # numpoints = 3
 
-    parser = argparse.ArgumentParser(description='Test extraction of planet astrometry and photometry.')
-    parser.add_argument('--test', metavar='t', help='test data date (loads from /in/ folder)')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='Test extraction of planet astrometry and photometry.')
+    # parser.add_argument('--test', metavar='t', help='test data date (loads from /in/ folder)')
+    # args = parser.parse_args()
 
-    if args.test:
-        print("Loading data...")
-        input_data, expected = load_testdata(args.test)
-    else:
-        print("Generating test data...")
-        input_data, expected = get_test_data(numpoints=numpoints, debug=False)
-        save_testdata(input_data, expected)
+    # if args.test:
+    #     print("Loading data...")
+    #     input_data, expected = load_testdata(args.test)
+    # else:
+    #     print("Generating test data...")
+    #     input_data, expected = get_test_data(numpoints=numpoints, debug=False)
+    #     save_testdata(input_data, expected)
 
-    print("Extracting planets...")
-    processed_data, found = extract_planets(input_data, debug=False)
+    # print("Extracting planets...")
+    # processed_data, found = extract_planets(input_data, debug=False)
 
-    analyze_planet_error(expected, input_data, found, processed_data)
+    # analyze_planet_error(expected, input_data, found, processed_data)
+
+    print("The main function for this script was used during testing but is now deprecated")
