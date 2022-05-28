@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import argparse
 from datetime import datetime
 
 from util import get_nircam_with_options, generate_psf
@@ -41,4 +42,15 @@ def get_test_data(numpoints=2, debug=False):
 
 
 if __name__ == '__main__':
-    get_test_data(numpoints=3, debug=True)
+    # get_test_data(numpoints=3, debug=True)
+
+    parser = argparse.ArgumentParser(description='Test extraction of planet astrometry and photometry.')
+    parser.add_argument('-n', '--amount', help='amount of images to generate and test', default=None, type=int)
+    parser.add_argument('-f', '--file', help='input json file', default=None)
+
+    args = parser.parse_args()
+
+    print(f"Generating data from {args.file}...")
+
+    f = open(args.file, 'r')
+    jsondata = json.load(f)

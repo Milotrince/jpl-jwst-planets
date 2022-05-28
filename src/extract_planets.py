@@ -7,14 +7,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from scipy import signal, ndimage
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import gaussian_filter
 from astropy.io import fits
 from PyAstronomy import pyasl # https://pyastronomy.readthedocs.io/en/latest/pyaslDoc/aslDoc/quadextreme.html
 from PyAstronomy.pyaC.pyaErrors.pyaValErrs import PyAValError 
 from matplotlib.colors import LogNorm
 
 from simulate_data import get_test_data
-from util import reshape_centered, get_nircam_with_options, generate_psf, convert_xy_to_rtheta, get_constants
+from util import get_existing_simulated_image, reshape_centered, get_nircam_with_options, generate_psf, convert_xy_to_rtheta, get_constants
 
 # Example to run:
 # python3 ./main/extract_planets.py --fits ./data/reduction_data_F356W.fits
@@ -283,26 +283,18 @@ if __name__ == '__main__':
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    numpoints = 3
-
     parser = argparse.ArgumentParser(description='Extract exoplanet astrometry and photometry.')
     parser.add_argument('--fits', metavar='f', help='load fits file data')
-    parser.add_argument('--filter', help='filter used for fits file')
     args = parser.parse_args()
 
+    star_location = None
     if args.fits:
-        input_data = load_fits_data(args.fits)
-        if not args.filter:
-            print('Error: When specifying the fits data, you should also have the --filter flag.')
-            exit(0)
-        nc.filter = args.filter
-        width, height = input_data.shape
-        nc.fov_arcsec = width * nc.pixelscale
-        # TODO: properly change nc settings so psfs will be the right size
+        input_data, star_location = get_existing_simulated_image(args.fits)
     else:
-        input_data, expected = get_test_data(numpoints=numpoints)
+        input_data, _ = get_test_data(numpoints=3)
 
-    processed_data, found = extract_planets(input_data, debug=True)
+    # set debug=False to not plot each step
+    processed_data, found = extract_planets(input_data, star_location, debug=True)
 
     plt.title(f'{args.fits} Result')
     for f in found:
@@ -312,5 +304,5 @@ if __name__ == '__main__':
     plt.colorbar()
     plt.show()
 
-    df = pd.DataFrame(found)
+    df = pd.DataFrame(found)[['location', 'planet flux']]
     print(df)

@@ -2,8 +2,30 @@ import numpy as np
 import configparser
 import webbpsf
 import operator
+from astropy.io import fits
+from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+from astropy.wcs.utils import pixel_to_skycoord, skycoord_to_pixel
 
 nc = None
+
+
+def get_existing_simulated_image(filepath):
+    """
+    Return image and star center from .fits file.
+    """
+    im = fits.open(filepath)
+
+    starCoords = SkyCoord([float(im[0].header['TARG_RA'])], [float(im[0].header['TARG_DEC'])], unit='deg')
+
+    wcs = WCS(im[('SCI',1)].header, naxis=2)
+    # Geoff: star position is -1,-1 relative to XREF_SCI,YREF_SCI 
+    starPosition = skycoord_to_pixel(starCoords,wcs)
+    x_center = starPosition[0][0] + 1
+    y_center = starPosition[1][0] + 1
+
+    return im[1].data, (x_center, y_center)
+
 
 def recenter(img, new_center):
     length = min(map(lambda i, j: min(i - j, j), img.shape, new_center))
@@ -28,17 +50,6 @@ def reshape_centered(img, bounding):
         slices = tuple(map(slice, start, end))
         result[slices] = img
         return result
-
-
-if __name__ == "__main__":
-    from scipy import misc
-    import matplotlib.pyplot as plt
-    
-    img = misc.ascent()
-    print(img.shape)
-    reshaped = reshape_centered(img, (1000,1000))
-    plt.imshow(reshaped)
-    plt.show()
 
 
 def convert_rtheta_to_xy(r, theta):
